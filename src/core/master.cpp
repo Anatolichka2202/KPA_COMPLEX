@@ -64,7 +64,7 @@ namespace bkd::core {
             buildOutgoingPacket();
 
             // 4. Отправка через сетевой слой и получение ответа
-            std::cout << "Master: sending packet, yls_index=" << (int)current_out_.yls_index << std::endl;
+            //std::cout << "Master: sending packet, yls_index=" << (int)current_out_.yls_index << std::endl;
 
             if (polling_enabled_) {
             auto response = network_->exchange(current_out_);
@@ -134,8 +134,8 @@ namespace bkd::core {
 
     void Master::buildOutgoingPacket() {
         // Здесь можно обновить yls_index на основе активных блоков.
-        // Пока просто установим индекс 12 (все блоки активны).
-        current_out_.yls_index = 12;
+
+        current_out_.yls_index = 1;
         current_out_.command = 1;
     }
 

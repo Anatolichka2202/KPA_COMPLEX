@@ -20,7 +20,7 @@ find_package(Qt6 6.2 REQUIRED COMPONENTS Core Widgets Charts)
 add_subdirectory(src/core)
 add_subdirectory(src/network)
 add_subdirectory(src/emulators)
-#add_subdirectory(src/gui)
+add_subdirectory(src/gui)
 add_subdirectory(src/logging)
 add_subdirectory(src/matlab_manager)
 
@@ -44,6 +44,7 @@ target_link_libraries(kpa_complex
     bkd_emulators
     Qt6::Core
     Qt6::Widgets
+    kpa_gui
     # Boost::system больше не линкуем, так как он header-only
 )
 

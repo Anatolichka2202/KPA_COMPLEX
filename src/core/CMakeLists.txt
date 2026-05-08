@@ -2,7 +2,7 @@ add_library(bkd_core STATIC
     master.cpp
     timer.h timer.cpp
     types.h
-    test_widget.h test_widget.cpp
+    #test_widget.h test_widget.cpp
 )
 
 target_include_directories(bkd_core PUBLIC ${CMAKE_SOURCE_DIR}/src)
