@@ -19,10 +19,13 @@ namespace bkd::core {
         , to_gui_(to_gui)
         , to_logger_(to_logger)
         , running_(false)
+        , polling_enabled_(false)
     {
         // Инициализация current_out_ (например, нулями)
         std::memset(&current_out_, 0, sizeof(current_out_));
         current_out_.command = 1; // команда запроса
+
+
     }
 
     Master::~Master() {
@@ -61,11 +64,19 @@ namespace bkd::core {
             buildOutgoingPacket();
 
             // 4. Отправка через сетевой слой и получение ответа
+            std::cout << "Master: sending packet, yls_index=" << (int)current_out_.yls_index << std::endl;
+
+            if (polling_enabled_) {
             auto response = network_->exchange(current_out_);
 
             // 5. Формирование TickData
             TickData data;
-            data.tick_time = 0; // пока 0, позже получим из PTP
+
+            //получаем время
+            auto now = std::chrono::system_clock::now();
+            uint64_t timestamp = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+
+            data.tick_time = timestamp; // пока глобальное/относительное, позже получим из PTP
             data.outgoing = current_out_;
             if (response.has_value()) {
                 data.incoming = *response;
@@ -79,16 +90,31 @@ namespace bkd::core {
             // 6. Отправка данных в GUI и логгер (если очереди не переполнены)
             to_gui_.push(data);
             to_logger_.push(data);
-
+            } else {
+                // ничего не отправляем, но всё равно формируем пустой TickData для GUI
+                TickData data;
+                data.tick_time = 0;
+                data.outgoing = current_out_;
+                data.response_received = false;
+                to_gui_.push(data);
+                to_logger_.push(data);
+            }
             // 7. Ожидание до конца такта
             timer.wait_next();
         }
     }
 
     void Master::processGuiCommands() {
+
         GuiCommand cmd;
         while (from_gui_.pop(cmd)) {
             switch (cmd.type) {
+            case GuiCommand::START_POLLING:
+                polling_enabled_ = true;
+                break;
+            case GuiCommand::STOP_POLLING:
+                polling_enabled_ = false;
+                break;
             case GuiCommand::SET_PYRO_MASK:
                 if (cmd.block >= 0 && cmd.block < NUM_BLOCKS) {
                     current_out_.pyro_masks[cmd.block] = cmd.pyro_mask;
@@ -96,7 +122,7 @@ namespace bkd::core {
                 break;
             case GuiCommand::SET_DRIVE_ANGLES:
                 if (cmd.block >= 0 && cmd.block < NUM_BLOCKS) {
-                    for (int i = 0; i < 3; ++i)
+                    for (int i = 0; i < 4; ++i)
                         current_out_.drives[cmd.block][i] = cmd.drive.angles[i];
                 }
                 break;
@@ -110,6 +136,7 @@ namespace bkd::core {
         // Здесь можно обновить yls_index на основе активных блоков.
         // Пока просто установим индекс 12 (все блоки активны).
         current_out_.yls_index = 12;
+        current_out_.command = 1;
     }
 
 } // namespace bkd::core

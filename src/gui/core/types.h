@@ -12,7 +12,7 @@ inline constexpr int NUM_BLOCKS = 12;               // количество бл
 inline constexpr int CYCLE_INTERVAL_US = 10000;     // 10 мс = 100 Гц
 inline constexpr int NETWORK_TIMEOUT_US = 5000;     // таймаут ожидания ответа (5 мс)
 inline constexpr bool USE_REAL_YLS = true;          // true – работа с реальным ЯЛС, false – эмуляция
-inline constexpr const char* YLS_IP =  /*"127.0.0.1";*/ "192.168.0.230"; // IP реального ЯЛС (из документации)
+inline constexpr const char* YLS_IP =  "127.0.0.1"; //"192.168.0.230"; // IP реального ЯЛС (из документации)
 inline constexpr uint16_t YLS_PORT = 1080;           // порт ЯЛС (из main.c: udp_bind(pcb, IP_ADDR_ANY, 1080))
 
 // ========== Структуры пакетов   ==========

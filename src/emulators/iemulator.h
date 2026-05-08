@@ -10,7 +10,7 @@ namespace bkd::emulators {
 
         // Обработать запрос к блоку, вернуть ответ.
         // Может генерировать исключения, которые должны обрабатываться вызывающим кодом.
-        virtual BKDResponse process(const BKDRequest& req) = 0;
+        virtual core::BKDResponse process(const core::BKDRequest& req) = 0;
     };
 
 } // namespace bkd::emulators

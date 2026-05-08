@@ -1,8 +1,8 @@
 #pragma once
 
 #include "types.h"
-#include "lockfree_queues.h"
-#include "network/inetwork_layer.h"
+#include "../../core/lockfree_queues.h"
+#include "../../network/inetwork_layer.h"
 #include <memory>
 #include <thread>
 #include <atomic>
