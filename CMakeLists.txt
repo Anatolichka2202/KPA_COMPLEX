@@ -14,7 +14,7 @@ set(Boost_NO_BOOST_CMAKE ON)
 # Ищем Boost без указания компонентов (system теперь header-only)
 find_package(Boost REQUIRED)
 
-find_package(Qt6 6.2 REQUIRED COMPONENTS Core Widgets Charts)
+find_package(Qt6 6.2 REQUIRED COMPONENTS Core Widgets Charts GraphsWidgets)
 
 # Добавить поддиректории
 add_subdirectory(src/core)
@@ -45,6 +45,7 @@ target_link_libraries(kpa_complex
     Qt6::Core
     Qt6::Widgets
     kpa_gui
+    Qt6::GraphsWidgets
     # Boost::system больше не линкуем, так как он header-only
 )
 

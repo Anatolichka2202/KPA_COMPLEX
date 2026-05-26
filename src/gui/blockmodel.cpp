@@ -11,41 +11,34 @@ BlockModel::BlockModel(int blockIndex, QObject *parent)
 
 void BlockModel::updateFromTickData(const bkd::core::TickData &data)
 {
-    // Преобразование кодов в градусы
-    double newAngle1 = rawToAngle(data.incoming.drives[m_blockIndex][0]);
-    double newAngle2 = rawToAngle(data.incoming.drives[m_blockIndex][1]);
+    // Используем первый процессор (индекс 0)
+    int16_t newAngle1 = data.incoming.data.ykp[m_blockIndex][0][0];
+    int16_t newAngle2 = data.incoming.data.ykp[m_blockIndex][0][1];
 
-    bool anglesChangedFlag = false;
-    if (!qFuzzyCompare(m_angle1, newAngle1)) {
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    double timeSec = (now - m_startTime) / 1000.0;
+    emit newDataPoint(timeSec, newAngle1, newAngle2);
+
+    // Обновляем текущие углы (для шкалы), только если изменились
+    if (m_angle1 != newAngle1 || m_angle2 != newAngle2) {
         m_angle1 = newAngle1;
-        addHistoryPoint(m_history1, m_angle1);
-        anglesChangedFlag = true;
-    }
-    if (!qFuzzyCompare(m_angle2, newAngle2)) {
         m_angle2 = newAngle2;
-        addHistoryPoint(m_history2, m_angle2);
-        anglesChangedFlag = true;
-    }
-    if (anglesChangedFlag) {
         emit anglesChanged(m_angle1, m_angle2);
-        // Инкрементальное обновление графика
-        qint64 now = QDateTime::currentMSecsSinceEpoch();
-        double timeSec = (now - m_startTime) / 1000.0;
-        emit newDataPoint(timeSec, m_angle1, m_angle2);
     }
 
-    uint8_t newMask = data.incoming.pyro_masks[m_blockIndex];
+    // Пиро – как было, но с индексом процессора 0
+    uint8_t newMask = data.incoming.data.yps_bkd[m_blockIndex][0];
     if (m_pyroMask != newMask) {
         uint8_t changed = newMask ^ m_pyroMask;
         for (int i = 0; i < 8; ++i) {
             if (changed & (1 << i)) {
                 if (newMask & (1 << i)) {
-                    qint64 now = QDateTime::currentMSecsSinceEpoch();
+                    qint64 nowFire = QDateTime::currentMSecsSinceEpoch();
                     if (m_pendingFireTime.contains(i+1)) {
                         qint64 requestTime = m_pendingFireTime.take(i+1);
-                        emit pyroFired(i+1, requestTime, now);
+                        emit pyroFired(i+1, requestTime, nowFire);
                     } else {
-                        emit pyroFired(i+1, 0, now);
+                        emit pyroFired(i+1, 0, nowFire);
                     }
                 }
             }
@@ -54,7 +47,6 @@ void BlockModel::updateFromTickData(const bkd::core::TickData &data)
         emit pyroMaskChanged(m_pyroMask);
     }
 }
-
 void BlockModel::addHistoryPoint(QVector<QPair<qint64, double>> &hist, double val)
 {
     qint64 now = QDateTime::currentMSecsSinceEpoch();
@@ -65,10 +57,9 @@ void BlockModel::addHistoryPoint(QVector<QPair<qint64, double>> &hist, double va
 
 double BlockModel::rawToAngle(int16_t raw)
 {
-    // raw в диапазоне -32768..32767, нужно преобразовать в -140..140 градусов
-    // Подразумевается, что 0 соответствует 0°, а максимум (32767) – 140°
-    // Формула: angle = (raw / 32767.0) * 140.0
-    return (static_cast<double>(raw) / 32767.0) * 140.0;
+
+    return raw;
+
 }
 
 void BlockModel::onPyroRequested(int channel)
@@ -82,4 +73,15 @@ void BlockModel::onPyroRequested(int channel)
     uint8_t newMask = m_pyroMask | (1 << (channel-1));
     cmd.pyro_mask = newMask;
     bkd::core::g_guiToMaster.push(cmd);
+}
+
+void BlockModel::setSetpoint(int gaugeIndex, int16_t value) {
+    if (gaugeIndex == 0) {
+        if (m_setpoint1 == value) return;
+        m_setpoint1 = value;
+    } else {
+        if (m_setpoint2 == value) return;
+        m_setpoint2 = value;
+    }
+    emit setpointsChanged(m_setpoint1, m_setpoint2);
 }

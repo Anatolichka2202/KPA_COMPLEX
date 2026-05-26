@@ -14,12 +14,11 @@ class Block : public QWidget
 public:
     explicit Block(BlockModel *model, QWidget *parent = nullptr);
 
-    // Методы для обновления из модели
-    void updateAngles(double angle1, double angle2);
+    void updateAngles(int16_t angle1, int16_t angle2);
     void updatePyroMask(uint8_t mask);
-    void addDataPoint(double timeSec, double angle1, double angle2);
-    void addPyroMarker(double timeSec, double angle1, double angle2);
-    void addSetpointMarker(double timeSec, double angle1, double angle2);
+    void addDataPoint(double timeSec, int16_t angle1, int16_t angle2);
+    void addPyroMarker(double timeSec, int16_t angle1, int16_t angle2);
+    void addSetpointMarker(double timeSec, int16_t angle1, int16_t angle2);
 
     double currentAngle1() const { return ui.gaude_inf_1->value(); }
     double currentAngle2() const { return ui.gaude_inf_2->value(); }
@@ -31,12 +30,13 @@ signals:
     void requestResize(bool expand);
 
 private slots:
-    void onSetpoint1(double sp);
-    void onSetpoint2(double sp);
+    void onSetpoint1(int16_t sp);
+    void onSetpoint2(int16_t sp);
     void onUnwrapClicked();
     void onAngle1EditingFinished();
     void onAngle2EditingFinished();
-    void onPyroClicked();
+    void onPyroClicked(int channel);
+    void onSetpointsChanged(int16_t sp1, int16_t sp2);
 
 private:
     void setupChart();

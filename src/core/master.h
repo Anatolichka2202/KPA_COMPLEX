@@ -9,44 +9,36 @@
 
 namespace bkd::core {
 
-    class Master {
-    public:
-        using OutgoingQueue = SPSCQueue<YVToYLSPacket, 16>;   // для отправки в сеть (не используется при прямом вызове)
-        using IncomingQueue = SPSCQueue<YLSToYVPacket, 16>;  // для приёма из сети (не используется при прямом вызове)
-        using GuiCmdQueue = SPSCQueue<GuiCommand, 32>;
-        using TickDataQueue = SPSCQueue<TickData, 64>;       // для GUI и логгера
+class Master {
+public:
+    using GuiCmdQueue = SPSCQueue<GuiCommand, 32>;
+    using TickDataQueue = SPSCQueue<TickData, 64>;
 
-        // Конструктор принимает указатель на реализацию сетевого слоя и ссылки на очереди.
-        Master(std::unique_ptr<network::INetworkLayer> network,
-            GuiCmdQueue& from_gui,
-            TickDataQueue& to_gui,
-            TickDataQueue& to_logger);
-        ~Master();
+    Master(std::unique_ptr<network::INetworkLayer> network,
+           GuiCmdQueue& from_gui,
+           TickDataQueue& to_gui,
+           TickDataQueue& to_logger);
+    ~Master();
 
-        void start();
-        void stop();
+    void start();          // запускает поток, если не запущен
+    void stop();           // останавливает поток (блокирует)
+    bool isRunning() const { return running_; }
 
-         void setPollingEnabled(bool enabled);
-    private:
-        void run();
+private:
+    void run();
+    void processGuiCommands();
+    void buildOutgoingPacket(uint32_t counter);
 
-        std::unique_ptr<network::INetworkLayer> network_;
-        GuiCmdQueue& from_gui_;
-        TickDataQueue& to_gui_;
-        TickDataQueue& to_logger_;
+    std::unique_ptr<network::INetworkLayer> network_;
+    GuiCmdQueue& from_gui_;
+    TickDataQueue& to_gui_;
+    TickDataQueue& to_logger_;
 
-        std::atomic<bool> running_;
-        std::thread thread_;
+    std::atomic<bool> running_;
+    std::thread thread_;
 
-        // Текущие уставки (формируются из циклограммы и команд GUI)
-        YVToYLSPacket current_out_;
-
-        // Вспомогательные функции
-        void processGuiCommands();
-        void updateFromTimeline(Timestamp now);  // позже добавим циклограмму
-        void buildOutgoingPacket();
-
-        std::atomic<bool> polling_enabled_;  // флаг, разрешающий опрос
-    };
+    YVToYLSPacket current_out_;
+    bool needSetCommand_ = false;   // true – следующий пакет должен быть с command=8
+};
 
 } // namespace bkd::core

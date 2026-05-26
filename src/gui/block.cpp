@@ -3,53 +3,28 @@
 #include <QtCharts/QValueAxis>
 #include <QVBoxLayout>
 #include <QLineEdit>
+#include <QLabel>
+#include <QDateTime>
+#include <QPushButton>
 
 Block::Block(BlockModel *model, QWidget *parent)
     : QWidget(parent), m_model(model)
 {
     ui.setupUi(this);
 
-    // Подключаем сигналы от AdvancedGauge
     connect(ui.gaude_inf_1, &AdvancedGauge::setpointChanged, this, &Block::onSetpoint1);
     connect(ui.gaude_inf_2, &AdvancedGauge::setpointChanged, this, &Block::onSetpoint2);
     connect(ui.unwrap_btn, &QPushButton::clicked, this, &Block::onUnwrapClicked);
 
-    // Поля ввода углов (добавьте два QLineEdit в .ui, назвав angle1_edit, angle2_edit)
-    // Если их нет, создайте динамически:
-    if (!ui.angle1_edit) {
-        ui.angle1_edit = new QLineEdit(this);
-        ui.angle2_edit = new QLineEdit(this);
-        // разместите их в нужном layout, например, в горизонтальный layout
-        QHBoxLayout *editLayout = new QHBoxLayout;
-        editLayout->addWidget(new QLabel("Угол 1:"));
-        editLayout->addWidget(ui.angle1_edit);
-        editLayout->addWidget(new QLabel("Угол 2:"));
-        editLayout->addWidget(ui.angle2_edit);
-        ui.basic_layout->insertLayout(1, editLayout);
-    }
+    // Поля ввода углов уже есть в .ui, просто подключаем
     connect(ui.angle1_edit, &QLineEdit::editingFinished, this, &Block::onAngle1EditingFinished);
     connect(ui.angle2_edit, &QLineEdit::editingFinished, this, &Block::onAngle2EditingFinished);
 
-    // Пиро – превратить QLabel в QPushButton
+    // Подключаем кнопки пиро (в .ui они уже QPushButton)
     for (int i = 1; i <= 8; ++i) {
         QPushButton *btn = findChild<QPushButton*>(QString("pyro_%1").arg(i));
-        if (!btn) {
-            // Если в .ui были QLabel, заменяем их динамически
-            QLabel *lbl = findChild<QLabel*>(QString("pyro_%1").arg(i));
-            if (lbl) {
-                btn = new QPushButton(lbl->text(), this);
-                btn->setObjectName(QString("pyro_%1").arg(i));
-                btn->setCheckable(true);
-                QLayout *layout = lbl->parentWidget()->layout();
-                int index = layout->indexOf(lbl);
-                delete lbl;
-                layout->insertWidget(index, btn);
-            }
-        }
         if (btn) {
-            connect(btn, &QPushButton::clicked, this, [this, i]() {
-                onPyroClicked(i);
-            });
+            connect(btn, &QPushButton::clicked, this, [this, i]() { onPyroClicked(i); });
         }
     }
 
@@ -60,9 +35,9 @@ Block::Block(BlockModel *model, QWidget *parent)
     connect(m_model, &BlockModel::pyroFired, this, [this](int ch, qint64 req, qint64 conf) {
         if (req == 0) return;
         double timeSec = (conf - m_model->startTime()) / 1000.0;
-        // Маркер ставим на текущие углы (можно и на другие значения)
         addPyroMarker(timeSec, currentAngle1(), currentAngle2());
     });
+    connect(m_model, &BlockModel::setpointsChanged, this, &Block::onSetpointsChanged);
 
     setupChart();
     ui.frame_for_graphs->setVisible(false);
@@ -112,14 +87,15 @@ void Block::setupChart()
 
     m_chartView = new QChartView(chart);
     m_chartView->setRenderHint(QPainter::Antialiasing);
-    m_chartView->chart()->setUseOpenGL(true); // GPU ускорение
+    // QChart::setUseOpenGL отсутствует в Qt 6.2, закомментировано
+    // m_chartView->chart()->setUseOpenGL(true);
 
     QVBoxLayout *frameLayout = new QVBoxLayout(ui.frame_for_graphs);
     frameLayout->setContentsMargins(0,0,0,0);
     frameLayout->addWidget(m_chartView);
 }
 
-void Block::updateAngles(double angle1, double angle2)
+void Block::updateAngles(int16_t angle1, int16_t angle2)
 {
     ui.gaude_inf_1->setValue(angle1);
     ui.gaude_inf_2->setValue(angle2);
@@ -142,45 +118,42 @@ void Block::updatePyroMask(uint8_t mask)
     }
 }
 
-void Block::addDataPoint(double timeSec, double angle1, double angle2)
+void Block::addDataPoint(double timeSec, int16_t angle1, int16_t angle2)
 {
     m_series1->append(timeSec, angle1);
     m_series2->append(timeSec, angle2);
-    // Ограничиваем длину истории (200 точек)
     while (m_series1->count() > 200) {
         m_series1->remove(0);
         m_series2->remove(0);
     }
-    // Сдвигаем ось X, чтобы показывать последние 10 секунд
     if (timeSec > 10) {
         m_chartView->chart()->axisX()->setRange(timeSec - 10, timeSec);
     }
 }
 
-void Block::addPyroMarker(double timeSec, double angle1, double angle2)
+void Block::addPyroMarker(double timeSec, int16_t angle1, int16_t angle2)
 {
     m_pyroMarkers->append(timeSec, angle1);
     m_pyroMarkers->append(timeSec, angle2);
 }
 
-void Block::addSetpointMarker(double timeSec, double angle1, double angle2)
+void Block::addSetpointMarker(double timeSec, int16_t angle1, int16_t angle2)
 {
     m_setpointMarkers->append(timeSec, angle1);
     m_setpointMarkers->append(timeSec, angle2);
 }
 
-void Block::onSetpoint1(double sp)
-{
+void Block::onSetpoint1(int16_t sp) {
     emit setpointChanged(0, sp);
-    // Отметка на графике (установка уставки)
-    double cur = currentAngle1();
-    addSetpointMarker(QDateTime::currentMSecsSinceEpoch() / 1000.0, sp, currentAngle2());
+    double timeSec = (QDateTime::currentMSecsSinceEpoch() - m_model->startTime()) / 1000.0;
+    // Добавляем точку только для угла 1, угол 2 – текущее значение с ЯЛС (не setpoint)
+    addSetpointMarker(timeSec, sp, currentAngle2());
 }
 
-void Block::onSetpoint2(double sp)
-{
+void Block::onSetpoint2(int16_t sp) {
     emit setpointChanged(1, sp);
-    addSetpointMarker(QDateTime::currentMSecsSinceEpoch() / 1000.0, currentAngle1(), sp);
+    double timeSec = (QDateTime::currentMSecsSinceEpoch() - m_model->startTime()) / 1000.0;
+    addSetpointMarker(timeSec, currentAngle1(), sp);
 }
 
 void Block::onUnwrapClicked()
@@ -216,5 +189,9 @@ void Block::onAngle2EditingFinished()
 
 void Block::onPyroClicked(int channel)
 {
-    m_model->onPyroRequested(channel);
+    emit fireChannel(channel);
+}
+void Block::onSetpointsChanged(int16_t sp1, int16_t sp2) {
+    ui.angle1_edit->setText(QString::number(sp1));
+    ui.angle2_edit->setText(QString::number(sp2));
 }

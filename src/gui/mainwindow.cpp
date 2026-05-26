@@ -5,7 +5,11 @@
 #include <QStatusBar>
 #include <QMessageBox>
 #include <QProcess>
+#include <QToolBar>
+
+#include "core/master.h"
 #include "core/types.h"
+#include "network/real_yls_network.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -13,7 +17,6 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("КПА - Тест блока (0)");
     resize(600, 500);
 
-    // Создаём модель и виджет блока 0
     m_model = new BlockModel(0, this);
     m_block = new Block(m_model, this);
     setCentralWidget(m_block);
@@ -23,7 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_block, &Block::requestResize, this, &MainWindow::onResizeRequest);
     connect(m_model, &BlockModel::pyroFired, this, &MainWindow::onPyroFired);
 
-    // Кнопки управления
+    // Панель управления
     QToolBar *toolbar = addToolBar("Управление");
     m_pingButton = new QPushButton("Тест связи", this);
     m_startStopButton = new QPushButton("Старт опроса", this);
@@ -33,14 +36,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pingButton, &QPushButton::clicked, this, &MainWindow::onPingClicked);
     connect(m_startStopButton, &QPushButton::clicked, this, &MainWindow::onStartStopClicked);
 
-    // Таймер для чтения данных из очереди Master
+    // Таймер чтения данных из очереди (30 fps)
     m_updateTimer = new QTimer(this);
     connect(m_updateTimer, &QTimer::timeout, this, &MainWindow::updateFromMaster);
-    m_updateTimer->start(33); // ~30 fps
+    m_updateTimer->start(33);
 }
 
 MainWindow::~MainWindow()
 {
+    stopMaster();   // гарантируем остановку мастера
     m_updateTimer->stop();
 }
 
@@ -52,17 +56,64 @@ void MainWindow::updateFromMaster()
     }
 }
 
-void MainWindow::onSetpoint(int gaugeIndex, double value)
+void MainWindow::startMaster()
 {
+    if (m_master) return;   // уже запущен
+
+    using namespace bkd::core;
+    using namespace bkd::network;
+
+    auto network = std::make_unique<RealYlsNetwork>(YLS_IP, YLS_PORT);
+    if (!network->start()) {
+        statusBar()->showMessage("Ошибка инициализации сети", 2000);
+        return;
+    }
+
+    m_master = std::make_unique<Master>(std::move(network),
+                                        g_guiToMaster,
+                                        g_masterToGui,
+                                        g_masterToLogger);
+    m_master->start();
+    statusBar()->showMessage("Тест запущен", 1000);
+}
+
+void MainWindow::stopMaster()
+{
+    if (!m_master) return;
+    m_master->stop();
+    m_master.reset();
+    statusBar()->showMessage("Тест остановлен", 1000);
+}
+
+void MainWindow::onStartStopClicked()
+{
+    bool start = m_startStopButton->isChecked();
+    if (start) {
+        startMaster();
+        m_startStopButton->setText("Стоп опроса");
+    } else {
+        stopMaster();
+        m_startStopButton->setText("Старт опроса");
+    }
+}
+
+void MainWindow::onSetpoint(int gaugeIndex, double value) {
+    if (!m_master) return;
+
+    int16_t val = static_cast<int16_t>(value);
+    // Сохраняем setpoint в модели для отображения
+    m_model->setSetpoint(gaugeIndex, val);
+
+    // Отправляем команду в мастер
     bkd::core::GuiCommand cmd;
     cmd.type = bkd::core::GuiCommand::SET_DRIVE_ANGLES;
     cmd.block = 0;
-    double cur1 = m_block->currentAngle1();
-    double cur2 = m_block->currentAngle2();
-    if (gaugeIndex == 0) cur1 = value;
-    else cur2 = value;
-    cmd.drive.angles[0] = static_cast<uint16_t>((cur1 + 140.0) / 280.0 * 65535.0); // обратное преобразование
-    cmd.drive.angles[1] = static_cast<uint16_t>((cur2 + 140.0) / 280.0 * 65535.0);
+    int16_t cur1 = m_block->currentAngle1();   // текущий угол с ЯЛС
+    int16_t cur2 = m_block->currentAngle2();
+    if (gaugeIndex == 0) cur1 = val;
+    else cur2 = val;
+    cmd.drive.angles[0] = cur1;
+    cmd.drive.angles[1] = cur2;
     cmd.drive.angles[2] = 0;
     cmd.drive.angles[3] = 0;
     bkd::core::g_guiToMaster.push(cmd);
@@ -70,7 +121,7 @@ void MainWindow::onSetpoint(int gaugeIndex, double value)
 
 void MainWindow::onFireChannel(int channel)
 {
-    // Только отправляем команду в модель, модель сама отправит в Master
+    if (!m_master) return;
     m_model->onPyroRequested(channel);
 }
 
@@ -112,19 +163,8 @@ bool MainWindow::pingHost(const QString &host, int timeoutMs)
 
 void MainWindow::onPingClicked()
 {
-    QString host = bkd::core::YLS_IP; // из types.h
-    if (pingHost(host, 2000))
+    if (pingHost(bkd::core::YLS_IP, 2000))
         statusBar()->showMessage("ЯЛС доступен", 2000);
     else
         statusBar()->showMessage("ЯЛС НЕ ДОСТУПЕН", 2000);
-}
-
-void MainWindow::onStartStopClicked()
-{
-    m_pollingActive = m_startStopButton->isChecked();
-    bkd::core::GuiCommand cmd;
-    cmd.type = m_pollingActive ? bkd::core::GuiCommand::START_POLLING : bkd::core::GuiCommand::STOP_POLLING;
-    cmd.block = 0;
-    bkd::core::g_guiToMaster.push(cmd);
-    m_startStopButton->setText(m_pollingActive ? "Стоп опроса" : "Старт опроса");
 }

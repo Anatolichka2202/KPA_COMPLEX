@@ -12,33 +12,56 @@ inline constexpr int NUM_BLOCKS = 12;               // количество бл
 inline constexpr int CYCLE_INTERVAL_US = 10000;     // 10 мс = 100 Гц
 inline constexpr int NETWORK_TIMEOUT_US = 5000;     // таймаут ожидания ответа (5 мс)
 inline constexpr bool USE_REAL_YLS = true;          // true – работа с реальным ЯЛС, false – эмуляция
-inline constexpr const char* YLS_IP =  /*"127.0.0.1";*/ "192.168.0.230"; // IP реального ЯЛС (из документации)
+inline constexpr const char* YLS_IP =  "127.0.0.1";   /*"192.168.0.230";*/ // IP реального ЯЛС (из документации)
 inline constexpr uint16_t YLS_PORT = 1080;           // порт ЯЛС (из main.c: udp_bind(pcb, IP_ADDR_ANY, 1080))
 
 // ========== Структуры пакетов   ==========
 #pragma pack(push, 1)
 
+
+
 // Запрос от ЯВ к ЯЛС (152 байта)
-struct YVToYLSPacket {
-    uint8_t yls_index;                      // [0] индекс маски (0-255)
-    uint8_t command;                        // [1] команда (1 – запрос) 8 - установить
-    int16_t drives[NUM_BLOCKS][4];         // [2-97] углы для 12 блоков, по 4 угла на блок (2 байта каждый)
-    uint8_t pyro_masks[NUM_BLOCKS];         // [98-109] маски пиро (12 байт)
-    uint8_t reserved[42];                   // [110-151] резерв (42 байта)
-};
+typedef struct __attribute__ ((packed)) {
+    uint8_t yls_addr;               // 0: адрес ЯЛС (обычно 0x01)
+    uint8_t command;                // 1: команда (1 – запрос, 8 – установка)
+    uint32_t counter;               // 2-5: счётчик сообщений
+    uint8_t yps_bkho_a;             // 6: маска пиро БКХО-А
+    uint8_t yps_bkd[12];            // 7-18: маски пиро для 12 БКД
+    int16_t ykp[12][2];             // 19-66: углы приводов (12 блоков × 2 угла) – по 2 байта
+    uint8_t yaz[12];                // 67-78: команды ЯАЗ (по 1 байту на блок)
+}YVToYLSPacket_;
+
+//static_assert(sizeof(YVToYLSPacket) == 152, "YVToYLSPacket size mismatch");
+
+constexpr uint8_t a = 152 - sizeof(YVToYLSPacket_);
+
+typedef struct __attribute__ ((packed))
+{
+    YVToYLSPacket_ data;
+    uint8_t reserve[a];
+}YVToYLSPacket; //финальное сообщение
+
+
 static_assert(sizeof(YVToYLSPacket) == 152, "YVToYLSPacket size mismatch");
 
 // Ответ от ЯЛС к ЯВ (8192 байта)
 struct YLSToYVPacket {
-    uint8_t yls_index;                      // [0] индекс маски (0-255)
-    uint8_t command;                        // [1] команда (2 – ответ)
-    int16_t drives[NUM_BLOCKS][4];         // [2-98] углы для 12 блоков, по 2 угла на блок (2 байта каждый)
-    uint8_t yaz_data[288];                  // [99-389] данные ЯАЗ (12×16)
-    uint8_t pyro_masks[NUM_BLOCKS];         // [390-401] маски пиро (12 байт)
-    uint8_t ylk_data[192];                  // [402-594] данные ЯЛК (12×16)
-    uint8_t yvp_data[648];                  // [595-610] данные ЯВП (12×54)
-    uint8_t reserved[6954];                 // [-8191] резерв (7074 байта) – до 8192
+    struct {
+    uint8_t yls_addr;
+    uint8_t command;                // обычно 2
+    uint32_t counter;
+    uint8_t yps_bkho_a[3];          // 6-8
+    uint8_t yps_bkd[12][3];            // 9-44: маски срабатывания (12 блоков × 3 процессора)
+    int16_t ykp[12][3][2];          //
+    uint8_t yaz[12][3][24];         // 189-1052: данные ЯАЗ
+    uint8_t ylk[12][16];            // 1053-1244: данные ЯЛК
+    uint8_t yvp[12][54];            // 1245-1892: данные ЯВП
+    }data;
+
+    uint8_t reserved[8192 - sizeof(data)];         // 1893-8191
 };
+
+
 static_assert(sizeof(YLSToYVPacket) == 8192, "YLSToYVPacket size mismatch");
 
 // Запрос к подсистеме (БКД) – 11 байт
@@ -48,7 +71,11 @@ struct BKDRequest {
     int16_t drive_angles[4];               // 3 угла (для ЯКП)
     uint8_t pyro_mask;                      // маска пиро (8 бит)
 };
+
+
 static_assert(sizeof(BKDRequest) == 11, "BKDRequest size mismatch");
+
+
 
 // Ответ от подсистемы (95 байт)
 struct BKDResponse {
@@ -86,7 +113,7 @@ inline uint16_t indexToBlockMask(uint8_t idx) {
 
 inline bool isBlockActive(const YVToYLSPacket& pkt, uint8_t block) {
     if (block >= NUM_BLOCKS) return false;
-    uint16_t mask = indexToBlockMask(pkt.yls_index);
+    uint16_t mask = indexToBlockMask(pkt.data.yls_addr);
     return (mask >> block) & 1;
 }
 
@@ -107,7 +134,6 @@ struct GuiCommand {
     union {
         uint8_t pyro_mask;
         struct { uint16_t angles[4]; } drive;
-        // для команд START/STOP данные не нужны
     };
 };
 

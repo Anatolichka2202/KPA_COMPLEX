@@ -5,7 +5,6 @@
 
 namespace bkd::core {
 
-// Глобальные очереди для обмена между GUI и Master
 extern SPSCQueue<GuiCommand, 32> g_guiToMaster;
 extern SPSCQueue<TickData, 64> g_masterToGui;
 extern SPSCQueue<TickData, 64> g_masterToLogger;

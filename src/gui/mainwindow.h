@@ -3,9 +3,14 @@
 
 #include <QMainWindow>
 #include <QTimer>
+#include <memory>
 #include "blockmodel.h"
 #include "block.h"
 #include "core/queues.h"
+
+// Forward declarations
+namespace bkd::core { class Master; }
+namespace bkd::network { class RealYlsNetwork; }
 
 class MainWindow : public QMainWindow
 {
@@ -28,13 +33,15 @@ private slots:
 private:
     void animateResize(bool expand);
     bool pingHost(const QString &host, int timeoutMs);
+    void startMaster();
+    void stopMaster();
 
     BlockModel *m_model;
     Block *m_block;
     QTimer *m_updateTimer;
     QPushButton *m_pingButton;
     QPushButton *m_startStopButton;
-    bool m_pollingActive = false;
+    std::unique_ptr<bkd::core::Master> m_master;
 };
 
 #endif // MAINWINDOW_H

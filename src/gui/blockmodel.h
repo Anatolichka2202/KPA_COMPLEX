@@ -19,18 +19,24 @@ public:
 
     double currentAngle1() const { return m_angle1; }
     double currentAngle2() const { return m_angle2; }
+    qint64 startTime() const { return m_startTime; }
     uint8_t pyroMask() const { return m_pyroMask; }
 
-    // История углов (для графика) – теперь не нужна, график обновляется инкрементально
+    // График обновляется инкрементально
     // Оставлены для совместимости, но можно удалить
     const QVector<QPair<qint64, double>> &history1() const { return m_history1; }
     const QVector<QPair<qint64, double>> &history2() const { return m_history2; }
 
+    void setSetpoint(int gaugeIndex, int16_t value);
+    int16_t setpoint1() const { return m_setpoint1; }
+    int16_t setpoint2() const { return m_setpoint2; }
+
 signals:
-    void anglesChanged(double angle1, double angle2);
+    void anglesChanged(int16_t angle1, int16_t angle2);
+    void newDataPoint(double timeSec, int16_t angle1, int16_t angle2);
     void pyroMaskChanged(uint8_t mask);
-    void newDataPoint(double timeSec, double angle1, double angle2);
     void pyroFired(int channel, qint64 requestTime, qint64 confirmTime);
+    void setpointsChanged(int16_t sp1, int16_t sp2);
 
 public slots:
     void onPyroRequested(int channel); // вызывается GUI при клике на пиро
@@ -41,7 +47,10 @@ private:
     uint8_t m_pyroMask = 0;
     qint64 m_startTime = 0;
 
-    // История для графика (оставлена для обратной совместимости, но не обязательна)
+    int16_t m_setpoint1 = 0;
+    int16_t m_setpoint2 = 0;
+
+    // История для графика
     QVector<QPair<qint64, double>> m_history1;
     QVector<QPair<qint64, double>> m_history2;
 

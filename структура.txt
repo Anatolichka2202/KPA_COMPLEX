@@ -1,0 +1,100 @@
+|-- 3rdparty
+|-- configs
+    |-- complex_config.ini
+|-- src
+    |-- core
+        |-- CMakeLists.txt
+        |-- lockfree_queues.h
+        |-- master.cpp
+        |-- master.h
+        |-- protocol.h
+        |-- queues.cpp
+        |-- queues.h
+        |-- test_widget.cpp
+        |-- test_widget.h
+        |-- timeline.cpp
+        |-- timeline.h
+        |-- timer.cpp
+        |-- timer.h
+        |-- types.h
+    |-- emulators
+        |-- block_emulator.cpp
+        |-- block_emulator.h
+        |-- CMakeLists.txt
+        |-- iemulator.h
+        |-- matlab_emulator.cpp
+        |-- matlab_emulator.h
+        |-- simple_emulator.cpp
+        |-- simple_emulator.h
+    |-- gui
+        |-- core
+            |-- blockmodel.cpp
+            |-- blockmodel.h
+            |-- block_model_updater.cpp
+            |-- block_model_updater.h
+            |-- corestub.h
+            |-- emulator.cpp
+            |-- emulator.h
+            |-- master.h
+            |-- timer.cpp
+            |-- timer.h
+            |-- types.h
+        |-- old
+            |-- gaugewidget.cpp
+            |-- gaugewidget.h
+        |-- widgets
+            |-- angle_guard
+                |-- advancedgauge.cpp
+                |-- advancedgauge.h
+                |-- advancedgaugeplugin.cpp
+                |-- advancedgaugeplugin.h
+                |-- AdvancedGaugePlugin.pro
+                |-- AdvancedGaugePlugin.pro.user
+                |-- gaugewidget.cpp
+                |-- gaugewidget.h
+                |-- main.cpp
+                |-- stepslider.cpp
+                |-- stepslider.h
+        |-- block.cpp
+        |-- block.h
+        |-- block.ui
+        |-- blockmodel.cpp
+        |-- blockmodel.h
+        |-- CMakeLists.txt
+        |-- CMakeLists.txt.user
+        |-- CMakeLists.txt.user.MCjIoO
+        |-- CMakeLists.txt.user.XqgVKU
+        |-- main.cpp
+        |-- mainwindow.cpp
+        |-- mainwindow.h
+        |-- mainwindow.ui
+    |-- logging
+        |-- CMakeLists.txt
+        |-- logger.cpp
+        |-- logger.h
+    |-- matlab_manager
+        |-- CMakeLists.txt
+        |-- matlab_manager.cpp
+        |-- matlab_manager.h
+    |-- network
+        |-- CMakeLists.txt
+        |-- dummy_network.h
+        |-- emulated_network.cpp
+        |-- emulated_network.h
+        |-- inetwork_layer.h
+        |-- real_yls_network.cpp
+        |-- real_yls_network.h
+        |-- support_yls.cpp
+        |-- support_yls.h
+        |-- yls_emulator.cpp
+        |-- yls_emulator.h
+    |-- main.cpp
+|-- tests
+    |-- integration
+    |-- unit
+    |-- CMakeLists.txt
+|-- .gitignore
+|-- CMakeLists.txt
+|-- KPA_ASCII.txt
+|-- KPA_Interface_doc.txt
+|-- спецификация.txt

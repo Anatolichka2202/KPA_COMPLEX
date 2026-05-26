@@ -70,8 +70,4 @@ std::optional<core::YLSToYVPacket> RealYlsNetwork::exchange(const core::YVToYLSP
     return response;
 }
 
-int a = 7;
-auto lambda = [](int a){return a;};
-auto lambda_ = [](int a){return a;};
-static_assert ( sizeof(lambda_(7)) == sizeof(lambda(7)) );
 } // namespace bkd::network
