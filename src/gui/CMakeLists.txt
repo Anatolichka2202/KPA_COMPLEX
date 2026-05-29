@@ -7,6 +7,7 @@ add_library(kpa_gui STATIC
     widgets/angle_guard/advancedgauge.cpp
     widgets/angle_guard/gaugewidget.cpp
     widgets/angle_guard/stepslider.cpp
+    panzoomchartview.h panzoomchartview.cpp
 )
 
 # 1. Эти пути нужны только для компиляции самой библиотеки, они не должны "светиться" наружу.

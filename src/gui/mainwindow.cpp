@@ -11,6 +11,8 @@
 #include "core/types.h"
 #include "network/real_yls_network.h"
 
+extern bool packetModifierCallback(uint8_t* packet, uint32_t len);
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -30,11 +32,15 @@ MainWindow::MainWindow(QWidget *parent)
     QToolBar *toolbar = addToolBar("Управление");
     m_pingButton = new QPushButton("Тест связи", this);
     m_startStopButton = new QPushButton("Старт опроса", this);
+    m_proxyButton = new QPushButton("Proxy режим", this);
     m_startStopButton->setCheckable(true);
+    m_proxyButton->setCheckable(true);
     toolbar->addWidget(m_pingButton);
     toolbar->addWidget(m_startStopButton);
+    toolbar -> addWidget(m_proxyButton);
     connect(m_pingButton, &QPushButton::clicked, this, &MainWindow::onPingClicked);
     connect(m_startStopButton, &QPushButton::clicked, this, &MainWindow::onStartStopClicked);
+    connect(m_proxyButton, &QPushButton::clicked, this, &MainWindow::onProxyClicked);
 
     // Таймер чтения данных из очереди (30 fps)
     m_updateTimer = new QTimer(this);
@@ -44,8 +50,10 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    stopMaster();   // гарантируем остановку мастера
+    if (m_master) stopMaster();
+    if (m_proxyBackend) m_proxyBackend->stop();
     m_updateTimer->stop();
+
 }
 
 void MainWindow::updateFromMaster()
@@ -63,11 +71,15 @@ void MainWindow::startMaster()
     using namespace bkd::core;
     using namespace bkd::network;
 
+    qDebug() << "startMaster called";
+
     auto network = std::make_unique<RealYlsNetwork>(YLS_IP, YLS_PORT);
     if (!network->start()) {
         statusBar()->showMessage("Ошибка инициализации сети", 2000);
         return;
     }
+
+    qDebug() << "Network started, creating Master...";
 
     m_master = std::make_unique<Master>(std::move(network),
                                         g_guiToMaster,
@@ -75,6 +87,8 @@ void MainWindow::startMaster()
                                         g_masterToLogger);
     m_master->start();
     statusBar()->showMessage("Тест запущен", 1000);
+
+    qDebug() << "Master started";
 }
 
 void MainWindow::stopMaster()
@@ -167,4 +181,48 @@ void MainWindow::onPingClicked()
         statusBar()->showMessage("ЯЛС доступен", 2000);
     else
         statusBar()->showMessage("ЯЛС НЕ ДОСТУПЕН", 2000);
+}
+
+void MainWindow::onProxyClicked()
+{
+    if (m_proxyModeActive) {
+        // Останавливаем прокси
+        if (m_proxyBackend) {
+            m_proxyBackend->stop();
+            m_proxyBackend.reset();
+        }
+        m_proxyModeActive = false;
+        m_proxyButton->setText("Proxy режим");
+        statusBar()->showMessage("Прокси остановлен", 1000);
+        // Также, если нужно, можно вернуться в режим ожидания (ни мастер, ни прокси не работают)
+        return;
+    }
+
+    // Если мастер активен – останавливаем его
+    if (m_master) {
+        stopMaster();
+        m_startStopButton->setChecked(false);
+        m_startStopButton->setText("Старт опроса");
+    }
+
+    // Создаём и запускаем прокси-бэкенд (например, WinDivert)
+    try {
+        auto backend = std::make_unique<bkd::proxy::WinDivertProxyBackend>(
+           // "192.168.17.246",   // IP БЦВМ (настройте под свою сеть)
+           // bkd::core::YLS_IP   // IP ЯЛС (из types.h)
+            "127.0.0.2",
+            "127.0.0.3"
+            );
+        backend->setModifier(packetModifierCallback);  // функция из packet_modifier_function.cpp
+        if (backend->start()) {
+            m_proxyBackend = std::move(backend);
+            m_proxyModeActive = true;
+            m_proxyButton->setText("Остановить прокси");
+            statusBar()->showMessage("WinDivert-прокси запущен (ARP-спуфинг активен)", 2000);
+        } else {
+            statusBar()->showMessage("Ошибка запуска прокси", 2000);
+        }
+    } catch (const std::exception& e) {
+        statusBar()->showMessage(QString("Ошибка: %1").arg(e.what()), 2000);
+    }
 }

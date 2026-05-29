@@ -7,6 +7,7 @@
 #include <QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QScatterSeries>
+#include "panzoomchartview.h"
 
 class Block : public QWidget
 {
@@ -37,6 +38,9 @@ private slots:
     void onAngle2EditingFinished();
     void onPyroClicked(int channel);
     void onSetpointsChanged(int16_t sp1, int16_t sp2);
+    void onNewDataPointsBatch(const QList<QPointF>& points1, const QList<QPointF>& points2);
+
+    void on_reset_clicked();
 
 private:
     void setupChart();
@@ -44,7 +48,7 @@ private:
     Ui::Block ui;
     BlockModel *m_model;
     uint8_t m_currentPyroMask = 0;
-    QChartView *m_chartView = nullptr;
+    PanZoomChartView *m_chartView = nullptr;
     QLineSeries *m_series1 = nullptr;
     QLineSeries *m_series2 = nullptr;
     QScatterSeries *m_pyroMarkers = nullptr;

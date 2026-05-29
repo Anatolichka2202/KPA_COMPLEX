@@ -8,6 +8,10 @@
 #include "block.h"
 #include "core/queues.h"
 
+#include "network/i_proxy_backend.h"
+#include "network/proxy_core.h"
+#include "network/windivert_proxy_backend.h"
+
 // Forward declarations
 namespace bkd::core { class Master; }
 namespace bkd::network { class RealYlsNetwork; }
@@ -29,7 +33,7 @@ private slots:
     void onPyroFired(int channel, qint64 requestTime, qint64 confirmTime);
     void onPingClicked();
     void onStartStopClicked();
-
+    void onProxyClicked();
 private:
     void animateResize(bool expand);
     bool pingHost(const QString &host, int timeoutMs);
@@ -41,7 +45,13 @@ private:
     QTimer *m_updateTimer;
     QPushButton *m_pingButton;
     QPushButton *m_startStopButton;
+    QPushButton *m_proxyButton;
     std::unique_ptr<bkd::core::Master> m_master;
+
+     QLabel *m_timeLabel;
+
+    std::unique_ptr<bkd::proxy::IProxyBackend> m_proxyBackend;
+    bool m_proxyModeActive = false;   // признак, что сейчас работает прокси
 };
 
 #endif // MAINWINDOW_H

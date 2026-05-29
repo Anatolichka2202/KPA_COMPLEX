@@ -5,6 +5,7 @@
 #include <QDateTime>
 #include <QVector>
 #include <QHash>
+#include <QPointF>
 
 namespace bkd::core {
 struct TickData;
@@ -37,6 +38,7 @@ signals:
     void pyroMaskChanged(uint8_t mask);
     void pyroFired(int channel, qint64 requestTime, qint64 confirmTime);
     void setpointsChanged(int16_t sp1, int16_t sp2);
+    void newDataPointsBatch(const QList <QPointF>& points1, const QList <QPointF>& points2);
 
 public slots:
     void onPyroRequested(int channel); // вызывается GUI при клике на пиро
@@ -46,6 +48,7 @@ private:
     double m_angle1 = 0.0, m_angle2 = 0.0;
     uint8_t m_pyroMask = 0;
     qint64 m_startTime = 0;
+    uint64_t m_startTick = 0;
 
     int16_t m_setpoint1 = 0;
     int16_t m_setpoint2 = 0;
@@ -59,6 +62,13 @@ private:
     void addHistoryPoint(QVector<QPair<qint64, double>> &hist, double val);
     static double rawToAngle(int16_t raw);
     static constexpr int MAX_HISTORY = 200;
+
+    QList<QPointF> m_buffer1;
+    QList<QPointF> m_buffer2;
+
+    uint64_t m_lastFlushTick = 0;
+    static constexpr int BUFFER_FLUSH_COUNT = 5; // сбрасываем бач каждые 5 точек
+    static constexpr uint64_t BUFFER_FLUSH_US = 50000; // или кажды n мс
 };
 
 #endif // BLOCKMODEL_H

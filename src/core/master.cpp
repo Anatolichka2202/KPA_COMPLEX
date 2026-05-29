@@ -1,6 +1,7 @@
 #include "master.h"
 #include "timer.h"
 #include "types.h"
+#include "databus.h"
 #include <chrono>
 #include <thread>
 #include <iostream>
@@ -43,7 +44,7 @@ void Master::run() {
     timer.start();
 
     uint32_t send_counter = 0;   // счётчик отправленных пакетов
-
+    try {
     while (running_) {
         auto cycle_start = std::chrono::steady_clock::now();
 
@@ -68,6 +69,20 @@ void Master::run() {
             data.response_received = false;
         }
 
+        if (data.response_received) {
+            // Обновляем шину данными из ответа ЯЛС
+            for (int block = 0; block < NUM_BLOCKS; ++block) {
+                // Углы (берём из блока, процессор 0)
+                for (int i = 0; i < ANGLES_PER_BLOCK; ++i) {
+                    g_dataBus.setAngle(block, i, data.incoming.data.ykp[block][0][i]);
+                }
+                // Маска пиро
+                g_dataBus.setPyroMask(block, data.incoming.data.yps_bkd[block][0]);
+            }
+            g_dataBus.setTickTime(data.tick_time);
+        }
+
+
         // 5. Отправка в GUI и логгер
         to_gui_.push(data);
         to_logger_.push(data);
@@ -77,6 +92,12 @@ void Master::run() {
 
         // 7. Ожидание до конца такта
         timer.wait_next();
+    }
+    } catch(const std::exception& e)
+    {
+        std::cerr << "Master thread exception: " << e.what() << std::endl;
+    }catch(...){
+        std::cerr << "Master thread unknown exception" << std::endl;
     }
 }
 
@@ -88,11 +109,20 @@ void Master::processGuiCommands() {
             if (cmd.block >= 0 && cmd.block < NUM_BLOCKS) {
                 current_out_.data.yps_bkd[cmd.block] = cmd.pyro_mask;
                 needSetCommand_ = true;
+                g_dataBus.setSetpointPyroMask(cmd.block, cmd.pyro_mask);
+                g_dataBus.setCommandPending(cmd.block, true);
             }
             break;
 
         case GuiCommand::SET_DRIVE_ANGLES:
             if (cmd.block >= 0 && cmd.block < NUM_BLOCKS) {
+
+                for(int i=0; i<2; ++i)
+                {
+                     g_dataBus.setSetpointAngle(cmd.block, i, cmd.drive.angles[i]);
+                }
+                     g_dataBus.setCommandPending(cmd.block, true);
+
                 // Сохраняем два угла (первый и второй)
                 current_out_.data.ykp[cmd.block][0] = static_cast<int16_t>(cmd.drive.angles[0]);
                 current_out_.data.ykp[cmd.block][1] = static_cast<int16_t>(cmd.drive.angles[1]);
@@ -101,7 +131,6 @@ void Master::processGuiCommands() {
             }
             break;
 
-            // START_POLLING и STOP_POLLING больше не используются
         default:
             break;
         }
@@ -113,7 +142,7 @@ void Master::buildOutgoingPacket(uint32_t counter) {
     current_out_.data.command = needSetCommand_ ? 8 : 1;
     needSetCommand_ = false;   // сбрасываем после формирования пакета
 
-    current_out_.data.yls_addr = 0x01;   // адрес ЯЛС (обычно 1)
+    current_out_.data.yls_addr = 0x01;   // адрес ЯЛС
     current_out_.data.counter = counter;
 
     // yps_bkho_a и yaz пока остаются нулями (не используются)

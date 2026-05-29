@@ -3,6 +3,12 @@ add_library(bkd_core STATIC
     timer.h timer.cpp
     types.h
     queues.cpp
+    databus.h databus.cpp
+    packet_modifier_function.cpp
+    #imodel.h
+    #matlab_model.h matlab_model.cpp
+    #injector.h injector.cpp
+
 
     #test_widget.h test_widget.cpp
 )

@@ -12,8 +12,9 @@ inline constexpr int NUM_BLOCKS = 12;               // количество бл
 inline constexpr int CYCLE_INTERVAL_US = 10000;     // 10 мс = 100 Гц
 inline constexpr int NETWORK_TIMEOUT_US = 5000;     // таймаут ожидания ответа (5 мс)
 inline constexpr bool USE_REAL_YLS = true;          // true – работа с реальным ЯЛС, false – эмуляция
-inline constexpr const char* YLS_IP =  "127.0.0.1";   /*"192.168.0.230";*/ // IP реального ЯЛС (из документации)
-inline constexpr uint16_t YLS_PORT = 1080;           // порт ЯЛС (из main.c: udp_bind(pcb, IP_ADDR_ANY, 1080))
+//inline constexpr const char* YLS_IP =  "127.0.0.1";   /*"192.168.17.230";*/ // IP реального ЯЛС
+inline constexpr const char* YLS_IP =  "192.168.17.230";   /*"192.168.17.230";*/ // IP реального ЯЛС
+inline constexpr uint16_t YLS_PORT = 101;           // порт ЯЛС (из main.c: udp_bind(pcb, IP_ADDR_ANY, 1080))
 
 // ========== Структуры пакетов   ==========
 #pragma pack(push, 1)
@@ -68,7 +69,7 @@ static_assert(sizeof(YLSToYVPacket) == 8192, "YLSToYVPacket size mismatch");
 struct BKDRequest {
     uint8_t block_number;                   // 0-11
     uint8_t command;                        // 1 = запрос
-    int16_t drive_angles[4];               // 3 угла (для ЯКП)
+    int16_t drive_angles[4];
     uint8_t pyro_mask;                      // маска пиро (8 бит)
 };
 
@@ -144,5 +145,7 @@ struct TickData {
     YLSToYVPacket incoming;
     bool response_received = false;
 };
+
+
 
 } // namespace bkd::core

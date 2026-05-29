@@ -1,4 +1,10 @@
 #include "block.h"
+#include "blockmodel.h"
+
+#include "core/types.h"
+#include "core/queues.h"
+#include "core/databus.h"
+
 #include <QtCharts/QChart>
 #include <QtCharts/QValueAxis>
 #include <QVBoxLayout>
@@ -28,16 +34,21 @@ Block::Block(BlockModel *model, QWidget *parent)
         }
     }
 
+    connect(ui.reset, &QPushButton::clicked, this, &Block::on_reset_clicked);
+
     // Подключаем модель
     connect(m_model, &BlockModel::anglesChanged, this, &Block::updateAngles);
     connect(m_model, &BlockModel::pyroMaskChanged, this, &Block::updatePyroMask);
-    connect(m_model, &BlockModel::newDataPoint, this, &Block::addDataPoint);
+    //connect(m_model, &BlockModel::newDataPoint, this, &Block::addDataPoint);
     connect(m_model, &BlockModel::pyroFired, this, [this](int ch, qint64 req, qint64 conf) {
         if (req == 0) return;
         double timeSec = (conf - m_model->startTime()) / 1000.0;
         addPyroMarker(timeSec, currentAngle1(), currentAngle2());
     });
     connect(m_model, &BlockModel::setpointsChanged, this, &Block::onSetpointsChanged);
+
+    connect(m_model, &BlockModel::newDataPointsBatch,
+            this, &Block::onNewDataPointsBatch);
 
     setupChart();
     ui.frame_for_graphs->setVisible(false);
@@ -47,7 +58,7 @@ void Block::setupChart()
 {
     QChart *chart = new QChart();
     chart->setTitle("Углы во времени");
-    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->setAnimationOptions(QChart::NoAnimation);
 
     m_series1 = new QLineSeries();
     m_series1->setName("Угол 1");
@@ -85,10 +96,9 @@ void Block::setupChart()
     m_setpointMarkers->attachAxis(axisX);
     m_setpointMarkers->attachAxis(axisY);
 
-    m_chartView = new QChartView(chart);
+    m_chartView = new PanZoomChartView(this);
+    m_chartView->setChart(chart);
     m_chartView->setRenderHint(QPainter::Antialiasing);
-    // QChart::setUseOpenGL отсутствует в Qt 6.2, закомментировано
-    // m_chartView->chart()->setUseOpenGL(true);
 
     QVBoxLayout *frameLayout = new QVBoxLayout(ui.frame_for_graphs);
     frameLayout->setContentsMargins(0,0,0,0);
@@ -99,8 +109,8 @@ void Block::updateAngles(int16_t angle1, int16_t angle2)
 {
     ui.gaude_inf_1->setValue(angle1);
     ui.gaude_inf_2->setValue(angle2);
-    ui.angle1_edit->setText(QString::number(angle1, 'f', 2));
-    ui.angle2_edit->setText(QString::number(angle2, 'f', 2));
+   // ui.angle1_edit->setText(QString::number(angle1, 'f', 2));
+   // ui.angle2_edit->setText(QString::number(angle2, 'f', 2));
 }
 
 void Block::updatePyroMask(uint8_t mask)
@@ -195,3 +205,50 @@ void Block::onSetpointsChanged(int16_t sp1, int16_t sp2) {
     ui.angle1_edit->setText(QString::number(sp1));
     ui.angle2_edit->setText(QString::number(sp2));
 }
+
+void Block::onNewDataPointsBatch(const QList<QPointF>& points1, const QList<QPointF>& points2) {
+    // Временно отключаем серии от чарта, чтобы избежать множественных перерисовок
+    QChart* chart = m_chartView->chart();
+
+        if (!points1.isEmpty()) {
+            m_series1->append(points1);
+            m_series2->append(points2);
+        }
+
+        // Ограничиваем количество точек (2000)
+        while (m_series1->count() > 2000) {
+            m_series1->remove(0);
+            m_series2->remove(0);
+        }
+
+
+/*
+    // Обновляем ось X
+    if (!points1.isEmpty()) {
+        double lastTime = points1.last().x();
+        if (lastTime > 10) {
+            chart->axisX()->setRange(lastTime - 10, lastTime);
+        }
+    } */
+}
+
+void Block::on_reset_clicked()
+{
+    // Сброс пиромаски для блока 0
+    bkd::core::GuiCommand cmd;
+    cmd.type = bkd::core::GuiCommand::SET_PYRO_MASK;
+    cmd.block = 0;               // индекс блока (0-11). Сейчас у вас только блок 0.
+    cmd.pyro_mask = 0;
+    bkd::core::g_guiToMaster.push(cmd);
+
+    // (Опционально) Сбросить уставки углов тоже
+    bkd::core::GuiCommand cmdAngles;
+    cmdAngles.type = bkd::core::GuiCommand::SET_DRIVE_ANGLES;
+    cmdAngles.block = 0;
+    cmdAngles.drive.angles[0] = 0;
+    cmdAngles.drive.angles[1] = 0;
+    cmdAngles.drive.angles[2] = 0;
+    cmdAngles.drive.angles[3] = 0;
+    bkd::core::g_guiToMaster.push(cmdAngles);
+}
+

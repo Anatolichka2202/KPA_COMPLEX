@@ -1,6 +1,7 @@
 #include "blockmodel.h"
 #include "core/types.h"
 #include "core/queues.h"
+#include "core/databus.h"
 #include <QDateTime>
 
 BlockModel::BlockModel(int blockIndex, QObject *parent)
@@ -15,18 +16,34 @@ void BlockModel::updateFromTickData(const bkd::core::TickData &data)
     int16_t newAngle1 = data.incoming.data.ykp[m_blockIndex][0][0];
     int16_t newAngle2 = data.incoming.data.ykp[m_blockIndex][0][1];
 
-    qint64 now = QDateTime::currentMSecsSinceEpoch();
-    double timeSec = (now - m_startTime) / 1000.0;
-    emit newDataPoint(timeSec, newAngle1, newAngle2);
+    // Время: берём из тика мастера (microseconds), переводим в секунды
+    if (m_startTick == 0) {
+        m_startTick = bkd::core::g_dataBus.getTickTime();
+    }
+    double timeSec = (bkd::core::g_dataBus.getTickTime() - m_startTick) / 1000000.0;
 
-    // Обновляем текущие углы (для шкалы), только если изменились
+    // Буферизуем точки
+    m_buffer1.append(QPointF(timeSec, newAngle1));
+    m_buffer2.append(QPointF(timeSec, newAngle2));
+
+    // Сброс буфера при накоплении 5 точек ИЛИ через 50 мс
+    bool shouldFlush = (m_buffer1.size() >= BUFFER_FLUSH_COUNT) ||
+                       ((data.tick_time - m_lastFlushTick) > BUFFER_FLUSH_US);
+    if (shouldFlush && !m_buffer1.isEmpty()) {
+        emit newDataPointsBatch(m_buffer1, m_buffer2);
+        m_buffer1.clear();
+        m_buffer2.clear();
+        m_lastFlushTick = data.tick_time;
+    }
+
+    // Обновляем текущие углы для шкалы (только если изменились)
     if (m_angle1 != newAngle1 || m_angle2 != newAngle2) {
         m_angle1 = newAngle1;
         m_angle2 = newAngle2;
         emit anglesChanged(m_angle1, m_angle2);
     }
 
-    // Пиро – как было, но с индексом процессора 0
+    // Пиро
     uint8_t newMask = data.incoming.data.yps_bkd[m_blockIndex][0];
     if (m_pyroMask != newMask) {
         uint8_t changed = newMask ^ m_pyroMask;
@@ -47,6 +64,7 @@ void BlockModel::updateFromTickData(const bkd::core::TickData &data)
         emit pyroMaskChanged(m_pyroMask);
     }
 }
+
 void BlockModel::addHistoryPoint(QVector<QPair<qint64, double>> &hist, double val)
 {
     qint64 now = QDateTime::currentMSecsSinceEpoch();
