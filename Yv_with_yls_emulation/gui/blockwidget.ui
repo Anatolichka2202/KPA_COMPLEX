@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>BlockWidget</class>
+ <widget class="QWidget" name="BlockWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>300</width>
+    <height>350</height>
+   </rect>
+</property>
+<!-- Заменяем фиксированные размеры на политику растяжения -->
+<property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>1</horstretch>
+    <verstretch>1</verstretch>
+   </sizepolicy>
+</property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#BlockWidget {
+    border: 2px solid #555;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    margin: 2px;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>5</number>
+   </property>
+   <property name="leftMargin">
+    <number>8</number>
+   </property>
+   <property name="topMargin">
+    <number>8</number>
+   </property>
+   <property name="rightMargin">
+    <number>8</number>
+   </property>
+   <property name="bottomMargin">
+    <number>8</number>
+   </property>
+   <item>
+    <widget class="QWidget" name="pyroWidget" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>30</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout" name="pyroLayout">
+      <property name="spacing">
+       <number>4</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QWidget" name="pyro1" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="pyro2" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="pyro3" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="pyro4" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="pyro5" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="pyro6" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="pyro7" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="pyro8" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: #CCCCCC; border: 2px solid #666666; border-radius: 10px;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="blockLabel">
+     <property name="styleSheet">
+      <string notr="true">font-weight: bold; font-size: 12px; margin: 2px;</string>
+     </property>
+     <property name="text">
+      <string>БЛОК 1</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="chartWidget" native="true">
+ <property name="sizePolicy">
+  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+   <horstretch>1</horstretch>
+   <verstretch>1</verstretch>
+  </sizepolicy>
+ </property>
+     <layout class="QVBoxLayout" name="chartLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+      <widget class="QChartView" name="chartView" native="true">
+ <property name="sizePolicy">
+  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+   <horstretch>1</horstretch>
+   <verstretch>1</verstretch>
+  </sizepolicy>
+ </property>
+</widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QWidget</extends>
+   <header>qchartview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
